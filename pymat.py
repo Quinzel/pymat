@@ -39,7 +39,6 @@ def replace_mat(tokens, selects):
 @TokenInputTransformer.wrap
 def mat_transformer(tokens):
     tokens = [TokenInfoShort(NAME, 'import'), TokenInfoShort(NAME, 'numpy'), TokenInfoShort(OP, ';') ] + [TokenInfoShort(t,v) for t,v,_,_,_ in tokens]
-    #tokens = [TokenInfoShort(t,v) for t,v,_,_,_ in tokens]
     selects = identify_mat(tokens)
     tokens = replace_mat(tokens, selects)
     return tokens
