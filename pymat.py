@@ -4,6 +4,7 @@ from tokenize import tokenize, untokenize, ENCODING, NEWLINE, NAME, ENDMARKER, N
 from io import BytesIO
 from itertools import groupby
 from collections import namedtuple
+import re
 
 MatTokenSelection = namedtuple('MatTokenSelection', ['begin', 'end'])
 TokenInfoShort = namedtuple('TokenInfoShort', ['type', 'string'])
@@ -27,8 +28,9 @@ def replace_mat(tokens, selects):
     for beg, end in reversed(selects):
         select = [(ENCODING, 'utf-8')] + tokens[beg:end] + [(ENDMARKER, '')]
         mat_command = untokenize(select).decode('utf-8')
-        mat_command = mat_command.replace(' ]', ']')
-        mat_command = "numpy.array(numpy.mat('''{}'''))".format(mat_command)
+        mat_command = "numpy.array(numpy.mat('''{}'''))".format(mat_command).replace('\n', ' ')
+        mat_command = re.sub(r'\[\s*', '[', mat_command)
+        mat_command = re.sub(r'\s*\]', ']', mat_command)
         if ';' not in mat_command:
             mat_command += '[0]'
         result[beg:end] = [TokenInfoShort(t,v) for t,v,_,_,_ in list(tokenize(BytesIO(mat_command.encode('utf_8')).readline))[1:-1]]
@@ -43,6 +45,11 @@ def mat_transformer(tokens):
     return tokens
 
 _extension = None
+
+# def load_ipython_extension(ip):
+#     for s in (ip.input_splitter, ip.input_transformer_manager):
+#         s.python_line_transforms.extend([mat_transformer()])
+#     print('loaded:', __name__)
 
 def load_ipython_extension(ip):
     global _extension
