@@ -37,21 +37,3 @@ array([[1, 2, 3],
        [4, 5, 6],
        [7, 8, 9]])
 ```
-
-Known issues:
-Additional 'Enter' required in multiline 
-```sh
-In [7]: E = [1 2 3;
-   ...: 4 5 6;
-   ...: 7 8 9]
-   ...: <-- 
-```
-Numbers must start in the same line as opening '['
-```sh
-In [7]: E = [ <-- parsing error
-   ...: 1 2 3;
-   ...: 4 5 6;
-   ...: 7 8 9]
-   ...:
-
-```
