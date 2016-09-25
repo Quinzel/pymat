@@ -54,6 +54,5 @@ def load_ipython_extension(ip):
 
 def unload_ipython_extension(ip):
     for s in (ip.input_splitter, ip.input_transformer_manager):
-        print (_extension)
         s.python_line_transforms.remove(_extension)
     print('unloaded:', __name__)
