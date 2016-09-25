@@ -6,7 +6,7 @@ array syntax from matlab is coverted into numpy.arrays.
 In [1]: %load_ext pymat
 loaded: pymat
 
-# In [2]: A, B, C, D = 1 2 3, 1; 2; 3, [1 2 3], [1 2; 3 4; 5 6]
+In [2]: A, B, C, D = 1 2 3, 1; 2; 3, [1 2 3], [1 2; 3 4; 5 6]
 
 In [3]: A
 Out[3]: array([1, 2, 3])
