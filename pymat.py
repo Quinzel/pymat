@@ -46,11 +46,6 @@ def mat_transformer(tokens):
 
 _extension = None
 
-# def load_ipython_extension(ip):
-#     for s in (ip.input_splitter, ip.input_transformer_manager):
-#         s.python_line_transforms.extend([mat_transformer()])
-#     print('loaded:', __name__)
-
 def load_ipython_extension(ip):
     global _extension
     _extension = mat_transformer()
