@@ -9,7 +9,6 @@ import re
 MatTokenSelection = namedtuple('MatTokenSelection', ['begin', 'end'])
 TokenInfoShort = namedtuple('TokenInfoShort', ['type', 'string'])
 def identify_mat(tokens):
-    tokens[0]
     results = []
     g = groupby(enumerate(tokens), lambda x: x[1].type in [NUMBER, NL, COMMENT] or 
                                             (x[1].type == OP and x[1].string == ';'))
