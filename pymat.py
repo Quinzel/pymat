@@ -1,43 +1,46 @@
+import re
+from collections import namedtuple
+from io import BytesIO
+from itertools import chain, groupby
+from tokenize import (COMMENT, ENCODING, ENDMARKER, NAME, NEWLINE, NL, NUMBER,
+                      OP, tokenize, untokenize)
+
 from IPython.core.inputtransformer import TokenInputTransformer
 
-from tokenize import tokenize, untokenize, ENCODING, NEWLINE, NAME, ENDMARKER, NUMBER, OP, NL, COMMENT
-from io import BytesIO
-from itertools import groupby
-from collections import namedtuple
-import re
-
-MatTokenSelection = namedtuple('MatTokenSelection', ['begin', 'end'])
+Selection = namedtuple('Selection', ['begin', 'end'])
 TokenInfoShort = namedtuple('TokenInfoShort', ['type', 'string'])
+
 def identify_mat(tokens):
-    results = []
+    selection = []
     g = groupby(enumerate(tokens), lambda x: x[1].type in [NUMBER, NL, COMMENT] or 
                                             (x[1].type == OP and x[1].string == ';'))
-    for test, group in g:
-        group = list(group)
-        if test and len(group) > 1:
-            beg_idx = group[0][0]
-            end_idx = group[-1][0] + 1
-            if tokens[beg_idx-1].type == OP and tokens[beg_idx-1].string == '[' : beg_idx -= 1
-            if tokens[end_idx].type == OP and tokens[end_idx].string == ']' : end_idx += 1
-            results.append(MatTokenSelection(beg_idx, end_idx))
-    return results
+    for is_a_match, group in g:
+        if is_a_match:
+            group = list(group)
+            if len(group) > 1:
+                beg, end = group[0][0], group[-1][0] + 1 # end is one element behind the last
+                if tokens[beg-1] == (OP, '[') and tokens[end] == (OP, ']'): #include surrounding braces 
+                    beg -= 1
+                    end += 1
+                selection.append(Selection(beg, end))
+    return selection
 
 def replace_mat(tokens, selects):
     result = tokens[:]
-    for beg, end in reversed(selects):
-        select = [(ENCODING, 'utf-8')] + tokens[beg:end] + [(ENDMARKER, '')]
-        mat_command = untokenize(select).decode('utf-8')
-        mat_command = "numpy.array(numpy.mat('''{}'''))".format(mat_command).replace('\n', ' ')
-        mat_command = re.sub(r'\[\s*', '[', mat_command)
-        mat_command = re.sub(r'\s*\]', ']', mat_command)
-        if ';' not in mat_command:
-            mat_command += '[0]'
-        result[beg:end] = [TokenInfoShort(t,v) for t,v,_,_,_ in list(tokenize(BytesIO(mat_command.encode('utf_8')).readline))[1:-1]]
+    for beg, end in reversed(selects): # run backwards not to mess up by chaning
+        select = [(ENCODING, 'utf-8')] + tokens[beg:end] + [(ENDMARKER, '')] # add encoding info
+        mat_cmd = untokenize(select).decode('utf-8')
+        mat_cmd = 'numpy.array(numpy.mat("{}"))'.format(mat_cmd).replace('\n', ' ')
+        mat_cmd = re.sub(r'\[\s*(.*?)\s*\]', r'[\g<1>]', mat_cmd)
+        if ';' not in mat_cmd: #means single dimentional array so extract first elemetn
+            mat_cmd += '[0]'
+        result[beg:end] = [TokenInfoShort(t,v) for t,v,_,_,_ in tokenize(BytesIO(mat_cmd.encode('utf_8')).readline)][1:-1] # [1:-1] remove encoding info
     return result
 
 @TokenInputTransformer.wrap
 def mat_transformer(tokens):
-    tokens = [TokenInfoShort(NAME, 'import'), TokenInfoShort(NAME, 'numpy'), TokenInfoShort(OP, ';') ] + [TokenInfoShort(t,v) for t,v,_,_,_ in tokens]
+    tokens = [(NAME, 'import'), (NAME, 'numpy'), (OP, ';')] + tokens
+    tokens = [TokenInfoShort(t, v) for t, v in zip(*zip(*tokens))] # limit token info to 2 informations
     selects = identify_mat(tokens)
     tokens = replace_mat(tokens, selects)
     return tokens
@@ -51,8 +54,8 @@ def load_ipython_extension(ip):
         s.python_line_transforms.extend([_extension])
     print('loaded:', __name__)
 
-
 def unload_ipython_extension(ip):
     for s in (ip.input_splitter, ip.input_transformer_manager):
         s.python_line_transforms.remove(_extension)
     print('unloaded:', __name__)
+    
