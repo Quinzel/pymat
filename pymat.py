@@ -1,7 +1,8 @@
 import re
 from collections import namedtuple
 from io import BytesIO
-from itertools import chain, groupby
+from itertools import chain, groupby, compress
+from operator import itemgetter
 from tokenize import (COMMENT, ENCODING, ENDMARKER, NAME, NEWLINE, NL, NUMBER,
                       OP, tokenize, untokenize)
 
@@ -12,17 +13,23 @@ TokenInfoShort = namedtuple('TokenInfoShort', ['type', 'string'])
 
 def identify_mat(tokens):
     selection = []
-    g = groupby(enumerate(tokens), lambda x: x[1].type in [NUMBER, NL, COMMENT] or 
-                                            (x[1].type == OP and x[1].string == ';'))
-    for is_a_match, group in g:
-        if is_a_match:
-            group = list(group)
-            if len(group) > 1:
-                beg, end = group[0][0], group[-1][0] + 1 # end is one element behind the last
-                if tokens[beg-1] == (OP, '[') and tokens[end] == (OP, ']'): #include surrounding braces 
-                    beg -= 1
-                    end += 1
-                selection.append(Selection(beg, end))
+    is_number_newline_commment_semicolon = lambda x: x[1].type in [NUMBER, NL, COMMENT] or (x[1].type == OP and x[1].string == ';')
+    
+    groups, selectors = [], []
+    for s, g in groupby(enumerate(tokens), is_number_newline_commment_semicolon):
+        groups.append(list(filter(lambda t: t[1].type in [NUMBER, OP, NL], g)))
+        selectors.append(s)
+    else:
+        selectors.append(True)
+        groups.append([(len(tokens), [TokenInfoShort(NL, '\n')])])
+
+    for group in compress(groups, selectors):
+        if len(group) > 1:
+            beg, end = group[0][0], group[-1][0] + 1 # end is one element behind the last
+            if tokens[beg-1] == (OP, '[') and tokens[end] == (OP, ']'): #include surrounding braces 
+                beg -= 1
+                end += 1
+            selection.append(Selection(beg, end))
     return selection
 
 def replace_mat(tokens, selects):
@@ -34,16 +41,20 @@ def replace_mat(tokens, selects):
         mat_cmd = re.sub(r'\[\s*(.*?)\s*\]', r'[\g<1>]', mat_cmd)
         if ';' not in mat_cmd: #means single dimentional array so extract first elemetn
             mat_cmd += '[0]'
-        result[beg:end] = [TokenInfoShort(t,v) for t,v,_,_,_ in tokenize(BytesIO(mat_cmd.encode('utf_8')).readline)][1:-1] # [1:-1] remove encoding info
+        mat_tok = map(itemgetter(0, 1), tokenize(BytesIO(mat_cmd.encode('utf_8')).readline))
+        result[beg:end] = [TokenInfoShort(*t) for t in mat_tok][1:-1] # [1:-1] remove encoding info and ENDMARKER tokens
     return result
+
 
 @TokenInputTransformer.wrap
 def mat_transformer(tokens):
     tokens = [(NAME, 'import'), (NAME, 'numpy'), (OP, ';')] + tokens
-    tokens = [TokenInfoShort(t, v) for t, v in zip(*zip(*tokens))] # limit token info to 2 informations
+    TokenInfoShortGetter = map(itemgetter(0, 1), tokens)
+    tokens = [TokenInfoShort(*t) for t in TokenInfoShortGetter]
     selects = identify_mat(tokens)
     tokens = replace_mat(tokens, selects)
     return tokens
+
 
 _extension = None
 
@@ -58,4 +69,4 @@ def unload_ipython_extension(ip):
     for s in (ip.input_splitter, ip.input_transformer_manager):
         s.python_line_transforms.remove(_extension)
     print('unloaded:', __name__)
-    
+
