@@ -17,11 +17,10 @@ def identify_mat(tokens):
     
     groups, selectors = [], []
     for s, g in groupby(enumerate(tokens), is_number_newline_commment_semicolon):
-        groups.append(list(filter(lambda t: t[1].type in [NUMBER, OP, NL], g)))
-        selectors.append(s)
-    else:
-        selectors.append(True)
-        groups.append([(len(tokens), [TokenInfoShort(NL, '\n')])])
+        maybe_mat = list(filter(lambda t: t[1].type in [NUMBER, OP, NL], g))
+        if [t for _, (t, _) in maybe_mat].count(NUMBER) > 1:
+            groups.append(maybe_mat)
+            selectors.append(s)
 
     for group in compress(groups, selectors):
         if len(group) > 1:
