@@ -50,12 +50,16 @@ def replace_mat(tokens, selects):
 
 @TokenInputTransformer.wrap
 def mat_transformer(tokens):
+    oryginal_tokens = tokens[:]
     if 'numpy' not in sys.modules:
         tokens = [(NAME, 'import'), (NAME, 'numpy'), (OP, ';')] + tokens
     TokenInfoShortGetter = map(itemgetter(0, 1), tokens)
     tokens = [TokenInfoShort(t, s) for t, s in TokenInfoShortGetter]
     selects = identify_mat(tokens)
-    tokens = replace_mat(tokens, selects)
+    if selects:
+        tokens = replace_mat(tokens, selects)
+    else:
+        tokens = oryginal_tokens
     return tokens
 
 
