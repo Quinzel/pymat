@@ -1,15 +1,18 @@
+import sys
 import re
 from collections import namedtuple
 from io import BytesIO
 from itertools import chain, groupby, compress
 from operator import itemgetter
 from tokenize import (COMMENT, ENCODING, ENDMARKER, NAME, NEWLINE, NL, NUMBER,
-                      OP, tokenize, untokenize)
-
-from IPython.core.inputtransformer import TokenInputTransformer
+                    OP, tokenize, untokenize)
 
 Selection = namedtuple('Selection', ['begin', 'end'])
 TokenInfoShort = namedtuple('TokenInfoShort', ['type', 'string'])
+
+
+from IPython.core.inputtransformer import TokenInputTransformer
+
 
 def identify_mat(tokens):
     selection = []
@@ -47,9 +50,10 @@ def replace_mat(tokens, selects):
 
 @TokenInputTransformer.wrap
 def mat_transformer(tokens):
-    tokens = [(NAME, 'import'), (NAME, 'numpy'), (OP, ';')] + tokens
+    if 'numpy' not in sys.modules:
+        tokens = [(NAME, 'import'), (NAME, 'numpy'), (OP, ';')] + tokens
     TokenInfoShortGetter = map(itemgetter(0, 1), tokens)
-    tokens = [TokenInfoShort(*t) for t in TokenInfoShortGetter]
+    tokens = [TokenInfoShort(t, s) for t, s in TokenInfoShortGetter]
     selects = identify_mat(tokens)
     tokens = replace_mat(tokens, selects)
     return tokens
@@ -68,4 +72,5 @@ def unload_ipython_extension(ip):
     for s in (ip.input_splitter, ip.input_transformer_manager):
         s.python_line_transforms.remove(_extension)
     print('unloaded:', __name__)
+
 
