@@ -1,6 +1,5 @@
 import re
 import sys
-from collections import namedtuple
 from io import BytesIO
 from itertools import chain, compress, groupby
 from operator import itemgetter
@@ -8,8 +7,6 @@ from tokenize import (COMMENT, ENCODING, ENDMARKER, NAME, NEWLINE, NL, NUMBER,
                       OP, tokenize, untokenize)
 
 from IPython.core.inputtransformer import TokenInputTransformer
-
-TokenInfoShort = namedtuple('TokenInfoShort', ['type', 'string'])
 
 def identify_mat(tokens):
     groups, selectors = [], []
@@ -39,8 +36,8 @@ def replace_mat(tokens, selects):
         mat_cmd = re.sub(r'\[\s*(.*?)\s*\]', r'[\g<1>]', mat_cmd)
         if ';' not in mat_cmd: #means single dimentional array so extract first elemetn
             mat_cmd += '[0]'
-        numpy_tok = tokenize(BytesIO(mat_cmd.encode('utf_8')).readline)
-        result[select] = [TokenInfoShort(t.type, t.string) for t in numpy_tok][1:-1] # [1:-1] remove encoding info and ENDMARKER tokens
+        numpy_tok = list(tokenize(BytesIO(mat_cmd.encode('utf_8')).readline))
+        result[select] = numpy_tok[1:-1] # [1:-1] remove encoding info and ENDMARKER tokens
     return result
 
 @TokenInputTransformer.wrap
@@ -48,10 +45,10 @@ def mat_transformer(tokens):
     tokens = list(filter(lambda t: t.type != NL, tokens)) # fix multiline issue
     selects = identify_mat(tokens)
     if selects:
-        tokens = [TokenInfoShort(t.type, t.string) for t in tokens]
         tokens = replace_mat(tokens, selects)
         if 'numpy' not in sys.modules:
-            tokens = [(NAME, 'import'), (NAME, 'numpy'), (OP, ';')] + tokens
+            import_numpy_tokens = list(tokenize(BytesIO('import numpy;'.encode('utf_8')).readline))[1:-1] # remove first and last decoding tokens
+            tokens = import_numpy_tokens + tokens
     return tokens
 
 _extension = None
