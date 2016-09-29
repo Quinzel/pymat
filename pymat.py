@@ -49,6 +49,10 @@ def mat_transformer(tokens):
         if 'numpy' not in sys.modules:
             import_numpy_tokens = list(tokenize(BytesIO('import numpy;'.encode('utf_8')).readline))[1:-1] # remove first and last decoding tokens
             tokens = import_numpy_tokens + tokens
+        else:
+            alias_import = 'import sys;numpy=sys.modules["numpy"];' #when numpy is imported as np before extension is loaded - most of the time is 
+            alias_tokens = list(tokenize(BytesIO(alias_import.encode('utf_8')).readline))[1:-1] # remove first and last decoding tokens
+            tokens = alias_tokens + tokens
     return tokens
 
 _extension = None
