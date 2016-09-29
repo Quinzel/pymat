@@ -23,7 +23,8 @@ def identify_mat(tokens):
     for group in compress(groups, selectors):
         if len(group) > 1:
             beg, end = group[0][0], group[-1][0] + 1 # end is one element behind the last
-            if tokens[beg-1] == (OP, '[') and tokens[end] == (OP, ']'): #include surrounding braces 
+            left, right = tokens[beg-1], tokens[end] # include surrounding square brackets '[' and ']' if there are any
+            if (left.type, left.string) == (OP, '[') and (right.type, right.string) == (OP, ']'): 
                 beg -= 1
                 end += 1
             selects.append(slice(beg, end))
@@ -38,8 +39,8 @@ def replace_mat(tokens, selects):
         mat_cmd = re.sub(r'\[\s*(.*?)\s*\]', r'[\g<1>]', mat_cmd)
         if ';' not in mat_cmd: #means single dimentional array so extract first elemetn
             mat_cmd += '[0]'
-        mat_tok = map(itemgetter(0, 1), tokenize(BytesIO(mat_cmd.encode('utf_8')).readline))
-        result[select] = [TokenInfoShort(*t) for t in mat_tok][1:-1] # [1:-1] remove encoding info and ENDMARKER tokens
+        mat_tok = tokenize(BytesIO(mat_cmd.encode('utf_8')).readline)
+        result[select] = [TokenInfoShort(t.type, t.string) for t in mat_tok][1:-1] # [1:-1] remove encoding info and ENDMARKER tokens
     return result
 
 @TokenInputTransformer.wrap
