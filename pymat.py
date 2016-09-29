@@ -12,9 +12,6 @@ from IPython.core.inputtransformer import TokenInputTransformer
 Selection = namedtuple('Selection', ['begin', 'end'])
 TokenInfoShort = namedtuple('TokenInfoShort', ['type', 'string'])
 
-
-
-
 def identify_mat(tokens):
     selection = []
     is_number_newline_commment_semicolon = lambda x: x[1].type in [NUMBER, NL, COMMENT] or (x[1].type == OP and x[1].string == ';')
@@ -48,7 +45,6 @@ def replace_mat(tokens, selects):
         result[beg:end] = [TokenInfoShort(*t) for t in mat_tok][1:-1] # [1:-1] remove encoding info and ENDMARKER tokens
     return result
 
-
 @TokenInputTransformer.wrap
 def mat_transformer(tokens):
     oryginal_tokens = tokens[:]
@@ -63,9 +59,7 @@ def mat_transformer(tokens):
         tokens = oryginal_tokens
     return tokens
 
-
 _extension = None
-
 def load_ipython_extension(ip):
     global _extension
     _extension = mat_transformer()
