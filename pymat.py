@@ -9,7 +9,6 @@ from tokenize import (COMMENT, ENCODING, ENDMARKER, NAME, NEWLINE, NL, NUMBER,
 
 from IPython.core.inputtransformer import TokenInputTransformer
 
-Selection = namedtuple('Selection', ['begin', 'end'])
 TokenInfoShort = namedtuple('TokenInfoShort', ['type', 'string'])
 
 def identify_mat(tokens):
@@ -21,27 +20,27 @@ def identify_mat(tokens):
             groups.append(maybe_mat)
             selectors.append(s)
     
-    selection = []
+    selects = []
     for group in compress(groups, selectors):
         if len(group) > 1:
             beg, end = group[0][0], group[-1][0] + 1 # end is one element behind the last
             if tokens[beg-1] == (OP, '[') and tokens[end] == (OP, ']'): #include surrounding braces 
                 beg -= 1
                 end += 1
-            selection.append(Selection(beg, end))
-    return selection
+            selects.append(slice(beg, end))
+    return selects
 
 def replace_mat(tokens, selects):
     result = tokens[:]
-    for beg, end in reversed(selects): # run backwards not to mess up by chaning
-        select = [(ENCODING, 'utf-8')] + tokens[beg:end] + [(ENDMARKER, '')] # add encoding info
-        mat_cmd = untokenize(select).decode('utf-8').replace('\n', ' ')
+    for select in reversed(selects): # run backwards not to mess up by chaning
+        mat_tok = [(ENCODING, 'utf-8')] + tokens[select] + [(ENDMARKER, '')] # add encoding info
+        mat_cmd = untokenize(mat_tok).decode('utf-8').replace('\n', ' ')
         mat_cmd = 'numpy.array(numpy.mat("{}"))'.format(mat_cmd)
         mat_cmd = re.sub(r'\[\s*(.*?)\s*\]', r'[\g<1>]', mat_cmd)
         if ';' not in mat_cmd: #means single dimentional array so extract first elemetn
             mat_cmd += '[0]'
         mat_tok = map(itemgetter(0, 1), tokenize(BytesIO(mat_cmd.encode('utf_8')).readline))
-        result[beg:end] = [TokenInfoShort(*t) for t in mat_tok][1:-1] # [1:-1] remove encoding info and ENDMARKER tokens
+        result[select] = [TokenInfoShort(*t) for t in mat_tok][1:-1] # [1:-1] remove encoding info and ENDMARKER tokens
     return result
 
 @TokenInputTransformer.wrap
