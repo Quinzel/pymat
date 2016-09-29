@@ -35,8 +35,8 @@ def replace_mat(tokens, selects):
     result = tokens[:]
     for beg, end in reversed(selects): # run backwards not to mess up by chaning
         select = [(ENCODING, 'utf-8')] + tokens[beg:end] + [(ENDMARKER, '')] # add encoding info
-        mat_cmd = untokenize(select).decode('utf-8')
-        mat_cmd = 'numpy.array(numpy.mat("{}"))'.format(mat_cmd).replace('\n', ' ')
+        mat_cmd = untokenize(select).decode('utf-8').replace('\n', ' ')
+        mat_cmd = 'numpy.array(numpy.mat("{}"))'.format(mat_cmd)
         mat_cmd = re.sub(r'\[\s*(.*?)\s*\]', r'[\g<1>]', mat_cmd)
         if ';' not in mat_cmd: #means single dimentional array so extract first elemetn
             mat_cmd += '[0]'
