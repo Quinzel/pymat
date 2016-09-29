@@ -13,16 +13,15 @@ Selection = namedtuple('Selection', ['begin', 'end'])
 TokenInfoShort = namedtuple('TokenInfoShort', ['type', 'string'])
 
 def identify_mat(tokens):
-    selection = []
-    is_number_newline_commment_semicolon = lambda x: x[1].type in [NUMBER, NL, COMMENT] or (x[1].type == OP and x[1].string == ';')
-    
     groups, selectors = [], []
+    is_number_newline_commment_semicolon = lambda x: x[1].type in [NUMBER, NL, COMMENT] or (x[1].type == OP and x[1].string == ';')
     for s, g in groupby(enumerate(tokens), is_number_newline_commment_semicolon):
         maybe_mat = list(filter(lambda t: t[1].type in [NUMBER, OP, NL], g))
         if [t for _, (t, _) in maybe_mat].count(NUMBER) > 1:
             groups.append(maybe_mat)
             selectors.append(s)
-
+    
+    selection = []
     for group in compress(groups, selectors):
         if len(group) > 1:
             beg, end = group[0][0], group[-1][0] + 1 # end is one element behind the last
