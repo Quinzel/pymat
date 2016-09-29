@@ -8,6 +8,9 @@ from tokenize import (COMMENT, ENCODING, ENDMARKER, NAME, NEWLINE, NL, NUMBER,
 
 from IPython.core.inputtransformer import TokenInputTransformer
 
+def _str2tokens(s):
+    return list(tokenize(BytesIO(s.encode('utf_8')).readline))[1:-1] # [1:-1] remove encoding info and ENDMARKER tokens
+
 def identify_mat(tokens):
     groups, selectors = [], []
     is_number_newline_commment_semicolon = lambda x: x[1].type in [NUMBER, NL, COMMENT] or (x[1].type == OP and x[1].string == ';')
@@ -36,8 +39,7 @@ def replace_mat(tokens, selects):
         mat_cmd = re.sub(r'\[\s*(.*?)\s*\]', r'[\g<1>]', mat_cmd)
         if ';' not in mat_cmd: #means single dimentional array so extract first elemetn
             mat_cmd += '[0]'
-        numpy_tok = list(tokenize(BytesIO(mat_cmd.encode('utf_8')).readline))
-        result[select] = numpy_tok[1:-1] # [1:-1] remove encoding info and ENDMARKER tokens
+        result[select] = _str2tokens(mat_cmd)
     return result
 
 @TokenInputTransformer.wrap
@@ -47,12 +49,10 @@ def mat_transformer(tokens):
     if selects:
         tokens = replace_mat(tokens, selects)
         if 'numpy' not in sys.modules:
-            import_numpy_tokens = list(tokenize(BytesIO('import numpy;'.encode('utf_8')).readline))[1:-1] # remove first and last decoding tokens
-            tokens = import_numpy_tokens + tokens
+            tokens = _str2tokens('import numpy;') + tokens
         else:
-            alias_import = 'import sys;numpy=sys.modules["numpy"];' #when numpy is imported as np before extension is loaded - most of the time is 
-            alias_tokens = list(tokenize(BytesIO(alias_import.encode('utf_8')).readline))[1:-1] # remove first and last decoding tokens
-            tokens = alias_tokens + tokens
+            #required when numpy is imported as np before extension is loaded - most of the time it is loaded as np
+            tokens = _str2tokens('import sys;numpy=sys.modules["numpy"];')  + tokens
     return tokens
 
 _extension = None
