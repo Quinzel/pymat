@@ -1,17 +1,18 @@
-import sys
 import re
+import sys
 from collections import namedtuple
 from io import BytesIO
-from itertools import chain, groupby, compress
+from itertools import chain, compress, groupby
 from operator import itemgetter
 from tokenize import (COMMENT, ENCODING, ENDMARKER, NAME, NEWLINE, NL, NUMBER,
-                    OP, tokenize, untokenize)
+                      OP, tokenize, untokenize)
+
+from IPython.core.inputtransformer import TokenInputTransformer
 
 Selection = namedtuple('Selection', ['begin', 'end'])
 TokenInfoShort = namedtuple('TokenInfoShort', ['type', 'string'])
 
 
-from IPython.core.inputtransformer import TokenInputTransformer
 
 
 def identify_mat(tokens):
@@ -76,5 +77,3 @@ def unload_ipython_extension(ip):
     for s in (ip.input_splitter, ip.input_transformer_manager):
         s.python_line_transforms.remove(_extension)
     print('unloaded:', __name__)
-
-
