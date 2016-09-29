@@ -16,10 +16,9 @@ def identify_mat(tokens):
     is_number_newline_commment_semicolon = lambda x: x[1].type in [NUMBER, NL, COMMENT] or (x[1].type == OP and x[1].string == ';')
     for s, g in groupby(enumerate(tokens), is_number_newline_commment_semicolon):
         maybe_mat = list(filter(lambda t: t[1].type in [NUMBER, OP, NL], g))
-        if [t for _, (t, _) in maybe_mat].count(NUMBER) > 1:
+        if [t.type for _, t in maybe_mat].count(NUMBER) > 1:
             groups.append(maybe_mat)
             selectors.append(s)
-    
     selects = []
     for group in compress(groups, selectors):
         if len(group) > 1:
@@ -45,16 +44,13 @@ def replace_mat(tokens, selects):
 
 @TokenInputTransformer.wrap
 def mat_transformer(tokens):
-    oryginal_tokens = tokens[:]
-    if 'numpy' not in sys.modules:
-        tokens = [(NAME, 'import'), (NAME, 'numpy'), (OP, ';')] + tokens
-    TokenInfoShortGetter = map(itemgetter(0, 1), tokens)
-    tokens = [TokenInfoShort(t, s) for t, s in TokenInfoShortGetter]
+    tokens = list(filter(lambda t: t.type != NL, tokens)) # fix multiline issue
     selects = identify_mat(tokens)
     if selects:
+        tokens = [TokenInfoShort(t.type, t.string) for t in tokens]
         tokens = replace_mat(tokens, selects)
-    else:
-        tokens = oryginal_tokens
+        if 'numpy' not in sys.modules:
+            tokens = [(NAME, 'import'), (NAME, 'numpy'), (OP, ';')] + tokens
     return tokens
 
 _extension = None
