@@ -39,8 +39,8 @@ def replace_mat(tokens, selects):
         mat_cmd = re.sub(r'\[\s*(.*?)\s*\]', r'[\g<1>]', mat_cmd)
         if ';' not in mat_cmd: #means single dimentional array so extract first elemetn
             mat_cmd += '[0]'
-        mat_tok = tokenize(BytesIO(mat_cmd.encode('utf_8')).readline)
-        result[select] = [TokenInfoShort(t.type, t.string) for t in mat_tok][1:-1] # [1:-1] remove encoding info and ENDMARKER tokens
+        numpy_tok = tokenize(BytesIO(mat_cmd.encode('utf_8')).readline)
+        result[select] = [TokenInfoShort(t.type, t.string) for t in numpy_tok][1:-1] # [1:-1] remove encoding info and ENDMARKER tokens
     return result
 
 @TokenInputTransformer.wrap
