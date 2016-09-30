@@ -24,10 +24,11 @@ def identify_mat(tokens):
     for group in indexed_tokens:
         if len(group) > 1:
             beg, end = group[0][0], group[-1][0] + 1 # end is one element behind the last
-            left, right = tokens[beg-1], tokens[end] # include surrounding square brackets '[' and ']' if there are any
-            if (left.type, left.string) == (OP, '[') and (right.type, right.string) == (OP, ']'): 
-                beg -= 1
-                end += 1
+            if beg > 0 and end < len(tokens): # include surrounding square brackets '[' and ']' if there are any, TODO: move to _index_numpy_mat_tokens function
+                left, right = tokens[beg-1], tokens[end] 
+                if (left.type, left.string) == (OP, '[') and (right.type, right.string) == (OP, ']'): 
+                    beg -= 1
+                    end += 1
             selects.append(slice(beg, end))
     return selects
 
