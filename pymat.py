@@ -35,12 +35,15 @@ def identify_mat(tokens):
 def _str2tokens(s):
     return list(tokenize(BytesIO(s.encode('utf_8')).readline))[1:-1] # [1:-1] remove ENCODING and ENDMARKER tokens (first and last tokens)
 
+def _tokens2str(t):
+    return untokenize(t).decode('utf-8')
+
 def replace_mat(tokens, selects):
     result = tokens[:]
     for select in reversed(selects): # run backwards not to mess up by chaning
         mat_tok = [(ENCODING, 'utf-8')] + tokens[select] + [(ENDMARKER, '')] # add encoding info
-        mat_cmd = untokenize(mat_tok).decode('utf-8').replace('\n', ' ')
-        mat_cmd = 'numpy.array(numpy.mat("{}"))'.format(mat_cmd)
+        mat_cmd = _tokens2str(mat_tok)
+        mat_cmd = 'numpy.array(numpy.mat("{}"))'.format(mat_cmd).replace('\n', ' ')
         mat_cmd = re.sub(r'\[\s*(.*?)\s*\]', r'[\g<1>]', mat_cmd)
         if ';' not in mat_cmd: #means single dimentional array so extract first elemetn
             mat_cmd += '[0]'
