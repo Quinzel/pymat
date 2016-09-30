@@ -8,19 +8,20 @@ from tokenize import (COMMENT, ENCODING, ENDMARKER, NAME, NEWLINE, NL, NUMBER,
 
 from IPython.core.inputtransformer import TokenInputTransformer
 
-def _str2tokens(s):
-    return list(tokenize(BytesIO(s.encode('utf_8')).readline))[1:-1] # [1:-1] remove encoding info and ENDMARKER tokens
-
-def identify_mat(tokens):
+def _index_numpy_mat_tokens(tokens):
     groups, selectors = [], []
-    is_number_newline_commment_semicolon = lambda x: x[1].type in [NUMBER, NL, COMMENT] or (x[1].type == OP and x[1].string == ';')
-    for s, g in groupby(enumerate(tokens), is_number_newline_commment_semicolon):
+    group_numpy_mat_expression = lambda t: t.type in [NUMBER, NL, COMMENT] or (t.type == OP and t.string == ';')
+    for s, g in groupby(enumerate(tokens), lambda x: group_numpy_mat_expression(x[1]) ):
         maybe_mat = list(filter(lambda t: t[1].type in [NUMBER, OP, NL], g))
         if [t.type for _, t in maybe_mat].count(NUMBER) > 1:
             groups.append(maybe_mat)
             selectors.append(s)
+    return compress(groups, selectors)
+
+def identify_mat(tokens):
+    indexed_tokens = _index_numpy_mat_tokens(tokens)
     selects = []
-    for group in compress(groups, selectors):
+    for group in indexed_tokens:
         if len(group) > 1:
             beg, end = group[0][0], group[-1][0] + 1 # end is one element behind the last
             left, right = tokens[beg-1], tokens[end] # include surrounding square brackets '[' and ']' if there are any
@@ -29,6 +30,9 @@ def identify_mat(tokens):
                 end += 1
             selects.append(slice(beg, end))
     return selects
+
+def _str2tokens(s):
+    return list(tokenize(BytesIO(s.encode('utf_8')).readline))[1:-1] # [1:-1] remove ENCODING and ENDMARKER tokens (first and last tokens)
 
 def replace_mat(tokens, selects):
     result = tokens[:]
@@ -51,8 +55,10 @@ def mat_transformer(tokens):
         if 'numpy' not in sys.modules:
             tokens = _str2tokens('import numpy;') + tokens
         else:
-            #required when numpy is imported as np before extension is loaded - most of the time it is loaded as np
-            tokens = _str2tokens('import sys;numpy=sys.modules["numpy"];')  + tokens
+            try: # required when numpy is imported as np before extension is loaded - most of the time it is loaded as np
+                exec('numpy')
+            except NameError:
+                tokens = _str2tokens('import sys;numpy=sys.modules["numpy"];')  + tokens
     return tokens
 
 _extension = None
