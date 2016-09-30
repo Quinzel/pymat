@@ -1,6 +1,5 @@
 # pymat
-ipython extension: Matlab, Octave syntax in ipython interpretter and jupyter notebook
-array syntax from matlab is coverted into numpy.arrays.
+Embedding numpy.mat function syntax into jupyter notebook  and ipython interpreter, allowing Matlab/Octave like definition of arrays and matrix.
 
 ```sh
 In [1]: %load_ext pymat
